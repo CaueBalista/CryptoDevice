@@ -9,7 +9,7 @@
 #include <linux/init.h>
 #include <linux/crypto.h>
 #include <linux/mm.h>
-#include <asm/scatterlist.h>
+#include <linux/scatterlist.h> // modificado de "asm" para "linux" 
 
 #define PFX "cryptoapi-demo: "
 
@@ -45,8 +45,8 @@ static void cryptoapi_demo(void)
         int ret;
         char *input, *encrypted, *decrypted;
 
-        memset(key, 0, sizeof(key));
-        memset(iv, 0, sizeof(iv));
+        memset(key, 0, sizeof(key));// recebe chave
+        memset(iv, 0, sizeof(iv));// recebe iv
 
         tfm = crypto_alloc_tfm (algo, mode);
 

@@ -1,4 +1,4 @@
-https://github.com/piyush-kansal/sys-crypt/blob/master/hw1/sys_xcrypt.c -> função FILL_SG();
+	 -> função FILL_SG();
 
 https://www.geeksforgeeks.org/memset-c-example/ -> função memset();
 

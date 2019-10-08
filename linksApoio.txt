@@ -1,0 +1,10 @@
+	 -> função FILL_SG();
+
+https://www.geeksforgeeks.org/memset-c-example/ -> função memset();
+
+https://www.kernel.org/doc/html/v4.12/crypto/index.html -> 
+
+https://elixir.bootlin.com/linux/v3.9/source/drivers/staging/rtl8192u/ieee80211/rtl_crypto.h#L49
+
+https://kernel.readthedocs.io/en/sphinx-samples/crypto-API.html -> skcipher
+https://kernel.readthedocs.io/en/sphinx-samples/crypto-API.html#code-examples --> exemplos

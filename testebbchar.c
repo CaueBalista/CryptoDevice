@@ -8,6 +8,52 @@
 #define BUFFER_LENGTH 256               ///< The buffer length (crude but fine)
 static char receive[BUFFER_LENGTH];     ///< The receive buffer from the LKM
  
+void criptografia(int fd){
+	int op,ret;
+	char string[BUFFER_LENGTH];
+
+	do {
+		printf("Escolha a opcao:\n");
+		printf("1 - Caracteres\n2 - Hexadecimal\n3 - Sair\nOpcao: ");
+		scanf("%d", &op);
+	
+		switch (op){
+
+			case 1: //Receber Caracteres
+
+				printf("Digite sua string: ");
+				scanf("%[^\n]%*c", string);  
+
+				ret = write(fd, string, strlen(string));
+				if (ret < 0){
+				      	perror("Failed to write the message to the device.");
+					return errno;
+				}
+
+				printf("Writing message to the device [%s].\n", string);
+			break;
+
+			case 2: //Receber valor Hexa
+
+				printf("Digite um valor em Hexa: ");
+				scanf("%[^\n]%*c", string);
+
+				
+			break;
+
+			default: break;
+		}
+	}while(op == 1 || op == 2);
+}
+
+void descriptografia(){
+
+}
+
+void calculoHash(){
+
+}
+
 int main(){
    int ret, fd;
    char stringToSend[BUFFER_LENGTH];
@@ -17,9 +63,33 @@ int main(){
       perror("Failed to open the device...");
       return errno;
    }
+
+   //menu de escolha caractere/hex
+	int op1;
+   	do{
+		printf("Escolha a opcao:\n");
+		printf("1 - Criptografar\n2 - Descriptografar\n3 - Calcular Hash\nOpcao: ");
+		scanf("%d", &op1);
+	
+		switch (op1){
+
+			case 1: criptografia(fd);
+			break;
+
+			case 2: descriptografia();
+			break;
+
+			case 3: calculoHash();
+			break;
+
+			default: break;
+		}
+				
+	}while(op1 == 1 || op1 == 2 || op1 == 3);
+	
    printf("Type in a short string to send to the kernel module:\n");
    scanf("%[^\n]%*c", stringToSend);                // Read in a string (with spaces)
-   printf("Writing message to the device [%s].\n", stringToSend);
+   
    ret = write(fd, stringToSend, strlen(stringToSend)); // Send the string to the LKM
    if (ret < 0){
       perror("Failed to write the message to the device.");

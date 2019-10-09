@@ -58,7 +58,7 @@ static void cryptoapi_demo(void)
         /* local variables */
         struct crypto_skcipher *tfm; // utilzamos skcipher ao inves de tfm
         struct scatterlist sg[8]; // entender o q eh scatterlist
-        struct skcipher_request *req; // necessario apra criptografar
+        struct skcipher_request *req = NULL; // necessario apra criptografar
         int    ret;
         char  *input, *encrypted, *decrypted;
 

@@ -4,24 +4,47 @@
  *    http://www.logix.cz/michal/
  */
 
-#include <linux/module.h>
+#include <linux/module.h> 
 #include <linux/moduleparam.h>
 #include <linux/init.h>
 #include <linux/crypto.h>
 #include <linux/mm.h>
-#include <asm/scatterlist.h>
+#include <linux/scatterlist.h> // modificado de "asm" para "linux" 
+#include <linux/err.h>
+#include <linux/errno.h>
+#include <linux/kernel.h>
+#include <linux/kmod.h>
+#include <linux/string.h>
+#include <linux/completion.h>
+#include <crypto/skcipher.h>
+#include <linux/stat.h>  
+#include <linux/device.h>   
+#include <linux/fs.h>             
+#include <linux/uaccess.h>   
 
+#define DATA_SIZE       256 // acredito que o tamnho desejado seja 32 bits
 #define PFX "cryptoapi-demo: "
 
-MODULE_AUTHOR("Michal Ludvig <michal@logix.cz>");
+#define CRYPTO_skcipher_MODE_CBC		0 // adicionado 0x00000002
+#define CRYPTO_skcipher_MODE_MASK		0 // adicionado 0x000000ff
+
+static char key[DATA_SIZE];
+module_param_string(key,key,DATA_SIZE,0);
+
+static char iv[DATA_SIZE];
+module_param_string(iv,iv,DATA_SIZE,0);
+
+int input;
+module_param(input,int,0);
+
+MODULE_AUTHOR("Eu, você e dois Caue");
 MODULE_DESCRIPTION("Simple CryptoAPI demo");
 MODULE_LICENSE("GPL");
 
 /* ====== CryptoAPI ====== */
 
-#define DATA_SIZE       16 // acredito que o tamnho desejado seja 32 bits
 
-#define FILL_SG(sg,ptr,len)     do { (sg)->page = virt_to_page(ptr); (sg)->offset = offset_in_page(ptr); (sg)->length = len; } while (0)
+
 
 static void hexdump(unsigned char *buf, unsigned int len)
 {
@@ -34,48 +57,57 @@ static void hexdump(unsigned char *buf, unsigned int len)
 static void cryptoapi_demo(void)
 {
         /* config options */
-        char *algo = "aes"; // precisa modificar 
-        int mode = CRYPTO_TFM_MODE_CBC;
-        char key[DATA_SIZE], iv[DATA_SIZE]; // alterado, estava com valor 16
-        
+        char *algo = "cbc(aes)"; // modificado: anterior "aes"
+        int   mode = CRYPTO_skcipher_MODE_CBC;
+	int   mask = CRYPTO_skcipher_MODE_MASK; // adicionado
+   
 
         /* local variables */
-        struct crypto_tfm *tfm;
+        struct crypto_skcipher *tfm; // utilzamos skcipher ao inves de tfm
         struct scatterlist sg[8]; // entender o q eh scatterlist
-        int ret;
-        char *input, *encrypted, *decrypted;
+        struct skcipher_request *req = NULL; // necessario apra criptografar
+        int    ret;
+        char   *encrypted, *decrypted;
 
-        memset(key, 0, sizeof(key));
-        memset(iv, 0, sizeof(iv));
+     
+	
+	
 
-        tfm = crypto_alloc_tfm (algo, mode);
+        tfm = crypto_alloc_skcipher(algo, mode, mask);
 
-        if (tfm == NULL) {
-                printk("failed to load transform for %s %s\n", algo, mode == CRYPTO_TFM_MODE_CBC ? "CBC" : "");
+        if (IS_ERR(tfm)) {
+                printk("failed to load transform for %s %s\n", algo, mode == CRYPTO_skcipher_MODE_CBC ? "CBC" : "");
                 return;
         }
-
-        ret = crypto_cipher_setkey(tfm, key, sizeof(key));
+        
+        ret = crypto_skcipher_setkey(tfm, key, sizeof(key));
 
         if (ret) {
-                printk(KERN_ERR PFX "setkey() failed flags=%x\n", tfm->crt_flags);
+                printk(KERN_ERR PFX "setkey() failed flags= \n"); // FALTA FALAR SOBRE ESSE ERRO DE FLAG
                 goto out;
         }
 
-        input = kmalloc(GFP_KERNEL, DATA_SIZE);
+        req = skcipher_request_alloc(tfm, GFP_KERNEL); // o que é GFP_KERNEL????
+    	if (!req) {
+        	printk("could not allocate tfm request\n");
+        	goto out;
+    	}
+
+
+        input = kmalloc(DATA_SIZE, GFP_KERNEL); // Parametros estavam invertidos
         if (!input) {
                 printk(KERN_ERR PFX "kmalloc(input) failed\n");
                 goto out;
         }
 
-        encrypted = kmalloc(GFP_KERNEL, DATA_SIZE);
+        encrypted = kmalloc(DATA_SIZE, GFP_KERNEL); // Parametros estavam invertidos
         if (!encrypted) {
                 printk(KERN_ERR PFX "kmalloc(encrypted) failed\n");
                 kfree(input);
                 goto out;
         }
 
-        decrypted = kmalloc(GFP_KERNEL, DATA_SIZE);
+        decrypted = kmalloc(DATA_SIZE, GFP_KERNEL); // Parametros estavam invertidos
         if (!decrypted) {
                 printk(KERN_ERR PFX "kmalloc(decrypted) failed\n");
                 kfree(encrypted);
@@ -83,43 +115,36 @@ static void cryptoapi_demo(void)
                 goto out;
         }
 
-        memset(input, 0, DATA_SIZE);
+        
 
-        FILL_SG(&sg[0], input, DATA_SIZE);
-        FILL_SG(&sg[1], encrypted, DATA_SIZE);
-        FILL_SG(&sg[2], decrypted, DATA_SIZE);
+        sg_init_one(&sg[0], input, DATA_SIZE);          //
+        sg_init_one(&sg[1], encrypted, DATA_SIZE);      //      entrou no lugar do FILL_SG();
+        sg_init_one(&sg[2], decrypted, DATA_SIZE);      //
 
-        crypto_cipher_set_iv(tfm, iv, crypto_tfm_alg_ivsize (tfm));
-        ret = crypto_cipher_encrypt(tfm, &sg[1], &sg[0], DATA_SIZE);
-        if (ret) {
-                printk(KERN_ERR PFX "encryption failed, flags=0x%x\n", tfm->crt_flags);
-                goto out_kfree;
-        }
+	printk(KERN_ERR PFX "IN: "); hexdump(input, DATA_SIZE);
+        skcipher_request_set_crypt(req, &sg[0], &sg[1], DATA_SIZE, iv); // ordem ods parametros: requisição, origem, destino, tamanho, iv;
+ 	skcipher_request_set_crypt(req, &sg[1], &sg[0], DATA_SIZE, iv); //Descriptar usa a ordem inversa
 
-        crypto_cipher_set_iv(tfm, iv, crypto_tfm_alg_ivsize (tfm));
-        ret = crypto_cipher_decrypt(tfm, &sg[2], &sg[1], DATA_SIZE);
-        if (ret) {
-                printk(KERN_ERR PFX "decryption failed, flags=0x%x\n", tfm->crt_flags);
-                goto out_kfree;
-        }
-
-        printk(KERN_ERR PFX "IN: "); hexdump(input, DATA_SIZE);
+        
         printk(KERN_ERR PFX "EN: "); hexdump(encrypted, DATA_SIZE);
-        printk(KERN_ERR PFX "DE: "); hexdump(decrypted, DATA_SIZE);
+        printk(KERN_ERR PFX "DE: "); hexdump(input, DATA_SIZE); //enquanto não descripitar, não printar
+	
 
-        if (memcmp(input, decrypted, DATA_SIZE) != 0)
+
+        if (memcmp(input, decrypted, DATA_SIZE) != 0) // mudei aki para saber se esta fazendo a criptografia
                 printk(KERN_ERR PFX "FAIL: input buffer != decrypted buffer\n");
         else
                 printk(KERN_ERR PFX "PASS: encryption/decryption verified\n");
 
-out_kfree:
-        kfree(decrypted);
-        kfree(encrypted);
-        kfree(input);
+	//out_kfree:
+        	kfree(decrypted);
+        	kfree(encrypted);
+        	kfree(input);
 
-out:
-        crypto_free_tfm(tfm);
-}
+	out:
+        crypto_free_skcipher(tfm);
+        skcipher_request_free(req);
+	}
 
 /* ====== Module init/exit ====== */
 

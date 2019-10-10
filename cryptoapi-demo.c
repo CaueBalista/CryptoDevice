@@ -22,12 +22,20 @@
 #include <linux/fs.h>             
 #include <linux/uaccess.h>   
 
-
+#define DATA_SIZE       32 // acredito que o tamnho desejado seja 32 bits
 #define PFX "cryptoapi-demo: "
 
 #define CRYPTO_skcipher_MODE_CBC		0 // adicionado 0x00000002
 #define CRYPTO_skcipher_MODE_MASK		0 // adicionado 0x000000ff
 
+static char key[DATA_SIZE];
+module_param_string(key,key,DATA_SIZE,0);
+
+static char iv[DATA_SIZE];
+module_param_string(iv,iv,DATA_SIZE,0);
+/*
+int input;
+module_param(input,int,0);*/
 
 MODULE_AUTHOR("Eu, você e dois Caue");
 MODULE_DESCRIPTION("Simple CryptoAPI demo");
@@ -35,7 +43,7 @@ MODULE_LICENSE("GPL");
 
 /* ====== CryptoAPI ====== */
 
-#define DATA_SIZE       16 // acredito que o tamnho desejado seja 32 bits
+
 
 
 static void hexdump(unsigned char *buf, unsigned int len)
@@ -52,19 +60,16 @@ static void cryptoapi_demo(void)
         char *algo = "cbc(aes)"; // modificado: anterior "aes"
         int   mode = CRYPTO_skcipher_MODE_CBC;
 	int   mask = CRYPTO_skcipher_MODE_MASK; // adicionado
-        char key[DATA_SIZE], iv[DATA_SIZE]; // alterado, estava com valor 16
-        
+   
 
         /* local variables */
         struct crypto_skcipher *tfm; // utilzamos skcipher ao inves de tfm
         struct scatterlist sg[8]; // entender o q eh scatterlist
-        struct skcipher_request *req; // necessario apra criptografar
+        struct skcipher_request *req = NULL; // necessario apra criptografar
         int    ret;
-        char  *input, *encrypted, *decrypted;
+        char   *input, *encrypted, *decrypted;
 
-        memset(key, 0, sizeof(key));// recebe chave
-        memset(iv, 0, sizeof(iv));// recebe iv
-
+     
         tfm = crypto_alloc_skcipher(algo, mode, mask);
 
         if (IS_ERR(tfm)) {
@@ -107,61 +112,36 @@ static void cryptoapi_demo(void)
                 goto out;
         }
 
-        memset(input, 0, DATA_SIZE);
+        memset(input, 1, DATA_SIZE);
 
         sg_init_one(&sg[0], input, DATA_SIZE);          //
         sg_init_one(&sg[1], encrypted, DATA_SIZE);      //      entrou no lugar do FILL_SG();
         sg_init_one(&sg[2], decrypted, DATA_SIZE);      //
 
-
-        // aparentemente não precisa dessa parte
-        /*crypto_skcipher_set_iv(tfm, iv, crypto_skcipher_ivsize(tfm)); //*
-
-        ret = crypto_skcipher_encrypt(tfm, &sg[1], &sg[0], DATA_SIZE);
-        if (ret) {
-                printk(KERN_ERR PFX "encryption failed, flags= \n");// MODIFICAR
-                goto out_kfree;
-        }*/
-
-        // aki consegue fazer a criptografia
-
-
-
+	printk(KERN_ERR PFX "IN: "); hexdump(input, DATA_SIZE);
         skcipher_request_set_crypt(req, &sg[0], &sg[1], DATA_SIZE, iv); // ordem ods parametros: requisição, origem, destino, tamanho, iv;
+ 	skcipher_request_set_crypt(req, &sg[1], &sg[0], DATA_SIZE, iv); //Descriptar usa a ordem inversa
 
-
-
-        /* não é assim q faz pra descripitar
-        crypto_skcipher_set_iv(tfm, iv, crypto_skcipher_ivsize(tfm));
-        ret = crypto_skcipher_decrypt(tfm, &sg[2], &sg[1], DATA_SIZE);
-        if (ret) {
-                printk(KERN_ERR PFX "decryption failed, flags= \n"); // modificado
-                goto out_kfree;
-        }
-        */
-
-
-        printk(KERN_ERR PFX "IN: "); hexdump(input, DATA_SIZE);
+        
         printk(KERN_ERR PFX "EN: "); hexdump(encrypted, DATA_SIZE);
+        printk(KERN_ERR PFX "DE: "); hexdump(input, DATA_SIZE); //enquanto não descripitar, não printar
+	
 
 
-       // printk(KERN_ERR PFX "DE: "); hexdump(decrypted, DATA_SIZE); enquanto não descripitar, não printar
-
-
-        if (memcmp(input, encrypted, DATA_SIZE) != 0) // mudei aki para saber se esta fazendo a criptografia
+        if (memcmp(input, decrypted, DATA_SIZE) != 0) // mudei aki para saber se esta fazendo a criptografia
                 printk(KERN_ERR PFX "FAIL: input buffer != decrypted buffer\n");
         else
                 printk(KERN_ERR PFX "PASS: encryption/decryption verified\n");
 
-out_kfree:
-        kfree(decrypted);
-        kfree(encrypted);
-        kfree(input);
+	//out_kfree:
+        	kfree(decrypted);
+        	kfree(encrypted);
+        	kfree(input);
 
-out:
+	out:
         crypto_free_skcipher(tfm);
         skcipher_request_free(req);
-}
+	}
 
 /* ====== Module init/exit ====== */
 

@@ -22,7 +22,7 @@
 #include <linux/fs.h>             
 #include <linux/uaccess.h>   
 
-#define DATA_SIZE       256 // acredito que o tamnho desejado seja 32 bits
+#define DATA_SIZE       32 // acredito que o tamnho desejado seja 32 bits
 #define PFX "cryptoapi-demo: "
 
 #define CRYPTO_skcipher_MODE_CBC		0 // adicionado 0x00000002
@@ -33,9 +33,9 @@ module_param_string(key,key,DATA_SIZE,0);
 
 static char iv[DATA_SIZE];
 module_param_string(iv,iv,DATA_SIZE,0);
-
+/*
 int input;
-module_param(input,int,0);
+module_param(input,int,0);*/
 
 MODULE_AUTHOR("Eu, você e dois Caue");
 MODULE_DESCRIPTION("Simple CryptoAPI demo");
@@ -67,12 +67,9 @@ static void cryptoapi_demo(void)
         struct scatterlist sg[8]; // entender o q eh scatterlist
         struct skcipher_request *req = NULL; // necessario apra criptografar
         int    ret;
-        char   *encrypted, *decrypted;
+        char   *input, *encrypted, *decrypted;
 
      
-	
-	
-
         tfm = crypto_alloc_skcipher(algo, mode, mask);
 
         if (IS_ERR(tfm)) {
@@ -115,7 +112,7 @@ static void cryptoapi_demo(void)
                 goto out;
         }
 
-        
+        memset(input, 1, DATA_SIZE);
 
         sg_init_one(&sg[0], input, DATA_SIZE);          //
         sg_init_one(&sg[1], encrypted, DATA_SIZE);      //      entrou no lugar do FILL_SG();

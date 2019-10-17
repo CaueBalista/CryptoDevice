@@ -7,95 +7,56 @@
  
 #define BUFFER_LENGTH 256               ///< The buffer length (crude but fine)
 static char receive[BUFFER_LENGTH];     ///< The receive buffer from the LKM
- 
-void criptografia(int fd){
-	int op,ret;
-	char string[BUFFER_LENGTH];
 
-	do {
-		printf("Escolha a opcao:\n");
-		printf("1 - Caracteres\n2 - Hexadecimal\n3 - Sair\nOpcao: ");
-		scanf("%d", &op);
-	
-		switch (op){
-
-			case 1: //Receber Caracteres
-
-				printf("Digite sua string: ");
-				scanf("%[^\n]%*c", string);  
-
-				ret = write(fd, string, strlen(string));
-				if (ret < 0){
-				      	perror("Failed to write the message to the device.");
-					return errno;
-				}
-
-				printf("Writing message to the device [%s].\n", string);
-			break;
-
-			case 2: //Receber valor Hexa
-
-				printf("Digite um valor em Hexa: ");
-				scanf("%[^\n]%*c", string);
-
-				
-			break;
-
-			default: break;
-		}
-	}while(op == 1 || op == 2);
-}
-
-void descriptografia(){
-
-}
-
-void calculoHash(){
-
-}
+               
 
 int main(){
-   int ret, fd;
-   char stringToSend[BUFFER_LENGTH];
-   printf("Starting device test code example...\n");
-   fd = open("/dev/ebbchar", O_RDWR);             // Open the device with read/write access
+   	int ret, fd;
+	char string[BUFFER_LENGTH+1], stringFinal[(BUFFER_LENGTH*2)+1];//257:256+1, 513:256*2+1
+	int i, len;
+	char stringEnvio[(BUFFER_LENGTH*2)+1];
+	int op;
+
+   printf("Starting testeebbchar...\n");
+   fd = open("/dev/cryptoDevice", O_RDWR);             // Open the device with read/write access
+
    if (fd < 0){
       perror("Failed to open the device...");
       return errno;
    }
 
-   //menu de escolha caractere/hex
-	int op1;
-   	do{
-		printf("Escolha a opcao:\n");
-		printf("1 - Criptografar\n2 - Descriptografar\n3 - Calcular Hash\nOpcao: ");
-		scanf("%d", &op1);
-	
-		switch (op1){
+	printf("Informe o formato da sua entrada\n1- Ascii\n2- Hexadecimal\nOpcao: ");
+	scanf("%d", &op);
 
-			case 1: criptografia(fd);
-			break;
+	printf("Digite sua string: ");
+	__fpurge(stdin);
+	scanf("%[^\n]%*c", string);
 
-			case 2: descriptografia();
-			break;
+	if (op == 1){
+		stringEnvio[0] = string[0];
+		stringEnvio[1] = '\0';
 
-			case 3: calculoHash();
-			break;
-
-			default: break;
+		len = strlen(string);
+		for(i = 0; i<len-2; i++){
+			sprintf(stringFinal+i*2, "%02X", string[i+2]);
 		}
-				
-	}while(op1 == 1 || op1 == 2 || op1 == 3);
+
+		strcat(stringEnvio, " ");
+		strcat(stringEnvio, stringFinal);
+	}
+	else {
+		strcpy(stringEnvio, string);
+	}
 	
-   printf("Type in a short string to send to the kernel module:\n");
-   scanf("%[^\n]%*c", stringToSend);                // Read in a string (with spaces)
+   	ret = write(fd, stringEnvio, strlen(stringEnvio));
    
-   ret = write(fd, stringToSend, strlen(stringToSend)); // Send the string to the LKM
    if (ret < 0){
-      perror("Failed to write the message to the device.");
-      return errno;
+	perror("Failed to write the message to the device.");
+	return errno;
    }
- 
+
+   printf("Writing message to the device [%s].\n", string);
+	
    printf("Press ENTER to read back from the device...\n");
    getchar();
  
@@ -105,7 +66,7 @@ int main(){
       perror("Failed to read the message from the device.");
       return errno;
    }
-   printf("The received message is: [%s]\n", receive);
+   printf("The received message is: [%02x]\n", receive);
    printf("End of the program\n");
    return 0;
 }

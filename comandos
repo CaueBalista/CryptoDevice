@@ -1,0 +1,5 @@
+rmmod cryptoapi-demo
+make
+insmod cryptoapi-demo.ko keyPega="0123456789ABCDEF" ivPega="0123456789ABCDEF" inputPega="8739852109758673" escolha=1
+insmod cryptoapi-demo.ko keyPega="0123456789ABCDEF" ivPega="0123456789ABCDEF" inputPega="1111111111111111" escolha=2
+journalctl --since "1 minutes ago" | grep kernel

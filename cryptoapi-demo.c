@@ -57,8 +57,7 @@ struct sdesc {
 static void hexdump(unsigned char *buf, unsigned int len)
 {
         while (len--){
-		printk(" %02x", *buf++);
-		//printk(" %c", *buf++);
+		printk("%02x", *buf++);
 	}
         //printk("\n");
 }
@@ -116,7 +115,7 @@ static int test_hash(const unsigned char *data, unsigned int datalen)
 	}
 
 	ret = calc_hash(alg, aux, datalen, hash_value);
-
+	
 	hexdump(hash_value, 20);
 
 	crypto_free_shash(alg);
@@ -255,8 +254,8 @@ static void cryptoapi_demo(void)
 		printk(KERN_ERR PFX "Output: "); hexdump(saida, DATA_SIZE+1);	
 	}
 	else if(escolha == 3) { //Hash
-		printk("HASH:\n\n\n");
-		test_hash(input, DATA_SIZE+1);
+		printk("HASH:");
+		test_hash(input, sizeof(input));
 	}
 											
 	//out_kfree:

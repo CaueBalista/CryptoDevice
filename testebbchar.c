@@ -1,3 +1,5 @@
+//Cauê Barros, Erik Bezerra, Leonardo Pigatto, Cauê de Abreu Balista
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<errno.h>
@@ -5,68 +7,181 @@
 #include<string.h>
 #include<unistd.h>
  
-#define BUFFER_LENGTH 256               ///< The buffer length (crude but fine)
-static char receive[BUFFER_LENGTH];     ///< The receive buffer from the LKM
+#define BUFFER_LENGTH 256               
+	static char receive[BUFFER_LENGTH];     
 
-               
+	void hexdump(unsigned char *buf, unsigned int len);	
 
-int main(){
-   	int ret, fd;
-	char string[BUFFER_LENGTH+1], stringFinal[(BUFFER_LENGTH*2)+1];//257:256+1, 513:256*2+1
-	int i, len;
-	char stringEnvio[(BUFFER_LENGTH*2)+1];
-	int op;
+	int converteHexa(char valor);
 
-   printf("Starting testeebbchar...\n");
-   fd = open("/dev/cryptoDevice", O_RDWR);             // Open the device with read/write access
+	int main(){
 
-   if (fd < 0){
-      perror("Failed to open the device...");
-      return errno;
-   }
+   	   int ret, fd;
+           char string[BUFFER_LENGTH+1], stringFinal[(BUFFER_LENGTH*2)+1];//257:256+1, 513:256*2+1
+	   int i, len;
+	   char stringEnvio[(BUFFER_LENGTH*2)+1];
+	   int op;
+	   char hexa[2];
+	   int hexa1, hexa2;
 
-	printf("Informe o formato da sua entrada\n1- Ascii\n2- Hexadecimal\nOpcao: ");
-	scanf("%d", &op);
+	   printf("Starting testeebbchar...\n");
+	   fd = open("/dev/cryptoDevice", O_RDWR);             // Open the device with read/write access
 
-	printf("Digite sua string: ");
-	__fpurge(stdin);
-	scanf("%[^\n]%*c", string);
+	   if (fd < 0){
+	      perror("Failed to open the device...");
+	      return errno;
+	   }
 
-	if (op == 1){
-		stringEnvio[0] = string[0];
-		stringEnvio[1] = '\0';
+		printf("Informe o formato da sua entrada\n1- Ascii\n2- Hexadecimal\nOpcao: ");
+		scanf("%d", &op);
 
-		len = strlen(string);
-		for(i = 0; i<len-2; i++){
-			sprintf(stringFinal+i*2, "%02X", string[i+2]);
+		printf("Digite sua string: ");
+		__fpurge(stdin);
+		scanf("%[^\n]%*c", string);
+	
+		if (op == 2){
+			stringEnvio[0] = string[0];
+			stringEnvio[1] = ' ';
+			stringEnvio[2] = '\0';
+
+		
+			hexa1 = converteHexa(string[2]);
+			hexa2 = converteHexa(string[3]);
+	
+			hexa1 = hexa1 * 16;
+			hexa1 += hexa2;		
+
+			len = strlen(string);
+			for(i = 2; i<len-2; i++){
+
+				stringFinal[i-2] = hexa1;
+
+				hexa1 = converteHexa(string[i*2]);
+				hexa2 = converteHexa(string[(i*2) + 1]);
+		
+				hexa1 = hexa1 * 16;
+				hexa1 += hexa2;
+
+			}
+
+			strcat(stringEnvio, stringFinal);
+			strcat(stringEnvio, "\0");
 		}
-
-		strcat(stringEnvio, " ");
-		strcat(stringEnvio, stringFinal);
-	}
-	else {
-		strcpy(stringEnvio, string);
-	}
+		else {
+			strcpy(stringEnvio, string);
+		}
 	
-   	ret = write(fd, stringEnvio, strlen(stringEnvio));
-   
-   if (ret < 0){
-	perror("Failed to write the message to the device.");
-	return errno;
-   }
+	   	ret = write(fd, stringEnvio, strlen(stringEnvio));
+	   
+	   if (ret < 0){
+		perror("Failed to write the message to the device.");
+		return errno;
+	   }
 
-   printf("Writing message to the device [%s].\n", string);
+	   printf("Writing message to the device [%s].\n", string);
 	
-   printf("Press ENTER to read back from the device...\n");
-   getchar();
- 
-   printf("Reading from the device...\n");
-   ret = read(fd, receive, BUFFER_LENGTH);        // Read the response from the LKM
-   if (ret < 0){
-      perror("Failed to read the message from the device.");
-      return errno;
-   }
-   printf("The received message is: [%02x]\n", receive);
-   printf("End of the program\n");
-   return 0;
-}
+	   printf("Press ENTER to read back from the device...\n");
+	   getchar();
+	 
+	   printf("Reading from the device...\n");
+
+	   
+	   ret = read(fd, receive, BUFFER_LENGTH);        // Read the response from the LKM
+
+	   if (ret < 0){
+	      perror("Failed to read the message from the device.");
+	      return errno;
+	   }
+	   printf("The received message is: ");//%s\n", receive);
+	   hexdump(receive, 16);
+	   printf("End of the program\n");
+	   return 0;
+	}
+
+	void hexdump(unsigned char *buf, unsigned int len)
+	{
+		while (len--){
+			printf("%02x", *buf++);
+		
+		}
+		printf("\n");
+	}  
+	int converteHexa(char valor){
+
+
+		switch(valor){
+
+			case '0':
+				return 00;
+			break;
+		
+			case '1':
+				return 01;
+			break;
+		
+			case '2':
+				return 02;
+			break;
+
+			case '3':
+				return 03;
+			break;
+
+			case '4':
+				return 04;
+			break;
+
+			case '5':
+				return 05;
+			break;
+
+			case '6':
+				return 06;
+			break;
+
+			case '7':
+				return 07;
+			break;
+
+			case '8':
+				return 8;
+			break;
+
+			case '9':
+				return 9;
+			break;
+
+			case 'a':
+			case 'A':
+				return 10;
+			break;
+
+			case 'b':
+			case 'B':
+				return 11;
+			break;
+
+			case 'c':
+			case 'C':
+				return 12;
+			break;
+
+			case 'd':
+			case 'D':
+				return 13;
+			break;
+
+			case 'e':
+			case 'E':
+				return 14;
+			break;
+
+			case 'f':
+			case 'F':
+				return 15;
+			break;
+		}
+	}
+
+
+

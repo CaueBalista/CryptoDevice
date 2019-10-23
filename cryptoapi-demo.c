@@ -43,7 +43,7 @@ int input;
 module_param(input,int,0);*/
 
 MODULE_AUTHOR("Eu, você e dois Caue");
-MODULE_DESCRIPTION("Simple CryptoAPI demo");
+MODULE_DESCRIPTION("Projeto de Sistemas Operacionais B - Modulo de Kernel utilizando a CryptoAPI");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");
 
@@ -59,70 +59,55 @@ static void hexdump(unsigned char *buf, unsigned int len)
         while (len--){
 		printk("%02x", *buf++);
 	}
-        //printk("\n");
+        printk("\n");
 }
 
 static struct sdesc *init_sdesc(struct crypto_shash *alg)
 {
-    struct sdesc *sdesc;
-    int size;
+        struct sdesc *sdesc;
+        int size;
 
-    size = sizeof(struct shash_desc) + crypto_shash_descsize(alg);
-    sdesc = kmalloc(size, GFP_KERNEL);
-    if (!sdesc)
+        size = sizeof(struct shash_desc) + crypto_shash_descsize(alg);
+        sdesc = kmalloc(size, GFP_KERNEL);
+        if (!sdesc)
         return ERR_PTR(-ENOMEM);
-    sdesc->shash.tfm = alg;
-    sdesc->shash.flags = 0x0;
-    return sdesc;
+        sdesc->shash.tfm = alg;
+        sdesc->shash.flags = 0x0;
+        return sdesc;
 }
 
 static int calc_hash(struct crypto_shash *alg, const unsigned char *data, unsigned int datalen, unsigned char *digest)
 {
-    struct sdesc *sdesc;
-    int ret;
+        struct sdesc *sdesc;
+        int ret;
 
-    sdesc = init_sdesc(alg);
-    if (IS_ERR(sdesc)) {
+        sdesc = init_sdesc(alg);
+        if (IS_ERR(sdesc)) {
         pr_info("can't alloc sdesc\n");
         return PTR_ERR(sdesc);
-    }
+        }
 
-    ret = crypto_shash_digest(&sdesc->shash, data, datalen, digest);
-    kfree(sdesc);
-    return ret;
+        ret = crypto_shash_digest(&sdesc->shash, data, datalen, digest);
+        hexdump(digest, 20);
+
+        kfree(sdesc);
+        return ret;
 }
 
 static int test_hash(const unsigned char *data, unsigned int datalen)
 {
-	struct crypto_shash *alg;
-	char *hash_alg_name = "sha1";
-	int ret, i;
-	unsigned char *hash_value, *aux;
+        struct crypto_shash *alg;
+        int ret;
+	char digest[40];
 
-	hash_value = kmalloc(20 * sizeof(unsigned char), GFP_KERNEL);
-	aux = kmalloc(20 * sizeof(unsigned char), GFP_KERNEL);
-
-	for(i = 0; i < datalen; i++)
-		aux[i] = data[i];
-
-	aux[i] = '\0';
-
-
-	alg = crypto_alloc_shash(hash_alg_name, 0, 0);
-	if (IS_ERR(alg)) {
-	    pr_info("Erro ao alocar algoritmo hash: %s\n", hash_alg_name);
-	    return PTR_ERR(alg);
-	}
-
-	ret = calc_hash(alg, aux, datalen, hash_value);
-	
-	hexdump(hash_value, 20);
-
-	crypto_free_shash(alg);
-	kfree(hash_value);
-	kfree(aux);
-
-	return ret;
+        alg = crypto_alloc_shash("sha1", 0, 0);
+        if (IS_ERR(alg)) {
+                pr_info("can't alloc alg sha1\n");
+                return PTR_ERR(alg);
+        }
+        ret = calc_hash(alg, data, datalen, digest);
+        crypto_free_shash(alg);
+        return ret;
 }
 
 static void cryptoapi_demo(void)
@@ -255,7 +240,7 @@ static void cryptoapi_demo(void)
 	}
 	else if(escolha == 3) { //Hash
 		printk("HASH:");
-		test_hash(input, sizeof(input));
+		test_hash(input, 16);
 	}
 											
 	//out_kfree:

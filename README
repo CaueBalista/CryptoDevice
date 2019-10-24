@@ -1,0 +1,7 @@
+Para utilizar o Makefile:
+
+	-> Caso queira executar utilize o comando no terminal: "make"
+
+	-> Caso já tenha executado uma vez, antes de utilizar o comando: "make"
+		utilize o comando "make remove" 
+		e em sequencia utilize: "make"
